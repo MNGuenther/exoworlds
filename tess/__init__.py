@@ -23,4 +23,5 @@ sns.set_style({"xtick.direction": "in","ytick.direction": "in"})
 sns.set_context(rc={'lines.markeredgewidth': 1})
 
 from .extract_QLP_data import extract_QLP_data
+from .extract_SPOC_data import extract_SPOC_data
 

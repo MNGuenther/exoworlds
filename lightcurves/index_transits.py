@@ -18,7 +18,7 @@ from __future__ import print_function, division, absolute_import
 #::: modules
 import numpy as np
 
-#::: lichtkurven modules
+#::: lightcurves modules
 from .utils import mask_ranges
 
 

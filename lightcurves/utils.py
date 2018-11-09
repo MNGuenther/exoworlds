@@ -13,11 +13,21 @@ Email: maxgue@mit.edu
 Web: www.mnguenther.com
 """
 
-import os, glob, time
+from __future__ import print_function, division, absolute_import
+
+#::: plotting settings
+import seaborn as sns
+sns.set(context='paper', style='ticks', palette='deep', font='sans-serif', font_scale=1.5, color_codes=True)
+sns.set_style({"xtick.direction": "in","ytick.direction": "in"})
+sns.set_context(rc={'lines.markeredgewidth': 1})
+
+#::: modules
 import numpy as np
+import os, glob, time
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 import pandas as pd
+from pprint import pprint
 
 
 
@@ -132,22 +142,6 @@ def format_latex(x1, x2, x3, nmax=3):
 
 
 
-
-###########################################################################
-#::: Version control
-###########################################################################
-
-
-def version_control(files='*.py', printing=True):
-    #    last_created_file = max(glob.iglob(files), key=os.path.getctime)
-    last_updated_file = max(glob.iglob(files), key=os.path.getmtime)
-    if printing == True: 
-    #    print "# Last created script: %s, %s" % ( last_created_file, time.ctime(os.path.getmtime(last_created_file)) )
-    #    print "# Last updated script: %s, %s" % ( last_updated_file, time.ctime(os.path.getmtime(last_updated_file)) )
-        print "# Last update: %s" % time.ctime(os.path.getmtime(last_updated_file))
-
-
-
 ###########################################################################
 #::: Dictionaries and tables
 ###########################################################################
@@ -168,4 +162,4 @@ def table_view(dic):
             dic_table[key] = dic[key]
     dic_table = Table(dic_table)
     dic_table = dic_table[subkeys]
-    print dic_table
+    pprint(dic_table)

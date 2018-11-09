@@ -11,11 +11,19 @@ Cambridge, MA 02109,
 USA
 Email: maxgue@mit.edu
 Web: www.mnguenther.com
-"""
+    """
 
+from __future__ import print_function, division, absolute_import
+
+#::: plotting settings
+import seaborn as sns
+sns.set(context='paper', style='ticks', palette='deep', font='sans-serif', font_scale=1.5, color_codes=True)
+sns.set_style({"xtick.direction": "in","ytick.direction": "in"})
+sns.set_context(rc={'lines.markeredgewidth': 1})
+
+#::: modules
 import numpy as np
 import matplotlib.pyplot as plt
-#from scipy import stats #needed for stats.nanmean/median on ngtshead
 
 
 

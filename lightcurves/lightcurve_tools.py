@@ -20,7 +20,7 @@ import numpy as np
 from astropy.stats import sigma_clip
 import timeit
 
-#::: lichtkurven modules
+#::: lightcurves modules
 from .utils import medsig
 from .binning import binning1D_per_night
 from . import index_transits
