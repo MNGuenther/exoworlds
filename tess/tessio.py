@@ -23,8 +23,6 @@ sns.set_style({"xtick.direction": "in","ytick.direction": "in"})
 sns.set_context(rc={'lines.markeredgewidth': 1})
 
 #::: modules
-import numpy as np
-import matplotlib.pyplot as plt
 import os
 from glob import glob
 import warnings
@@ -47,13 +45,6 @@ def tessio(tic_id, sectors=None, server='iMac', pipeline='spoc', keys=None, PDC=
         [1,2,3] -> sectors 1,2,3
     '''
     
-    if server=='iMac':
-        SPOC_PATH = '/Users/mx/TESS_DATA/SPOC_lightcurves'
-        QLP_PATH = '/Users/mx/TESS_DATA/QLP_lightcurves'
-    elif server=='pdo':
-        SPOC_PATH = '/pdo/spoc-data/sector-*/light-curve'
-        QLP_PATH = None
-        
     
     if PDC==True and auto_correct_dil==True:
         raise ValueError('You dont want to do that.')
@@ -65,12 +56,19 @@ def tessio(tic_id, sectors=None, server='iMac', pipeline='spoc', keys=None, PDC=
     if pipeline=='spoc':    
         
         if sectors is None:
-            fnames = glob( os.path.join(SPOC_PATH,'s*','*'+tic_id+'*lc.fits.gz') )
+            if server=='iMac':
+                fnames = glob( os.path.join('/Users/mx/TESS_DATA/SPOC_lightcurves','s*','*'+tic_id+'*lc.fits.gz') )
+            elif server=='pdo':
+                fnames = glob( os.path.join('/pdo/spoc-data/sector-*/light-curve','*'+tic_id+'*lc.fits.gz') )
+                
         else:
             fnames = []
             for s in sectors:
-                fnames += glob( os.path.join(SPOC_PATH,'s*'+str(s),'*'+tic_id+'*lc.fits.gz') )
-        
+                if server=='iMac':
+                    fnames += glob( os.path.join('/Users/mx/TESS_DATA/SPOC_lightcurves','s*'+str(s),'*'+tic_id+'*lc.fits.gz') )
+                elif server=='pdo':
+                    fnames += glob( os.path.join('/pdo/spoc-data/sector-*'+str(s)+'*/light-curve','*'+tic_id+'*lc.fits.gz') )
+         
         if len(fnames)>0:
             data = return_SPOC_data(fnames, keys=keys, PDC=PDC, auto_correct_dil=auto_correct_dil, flatten=flatten)
             return data
@@ -86,11 +84,11 @@ def tessio(tic_id, sectors=None, server='iMac', pipeline='spoc', keys=None, PDC=
     elif pipeline=='qlp':    
         
         if sectors is None:
-            fnames = glob( os.path.join(QLP_PATH,'s*',tic_id+'.h5') )
+            fnames = glob( os.path.join('/Users/mx/TESS_DATA/QLP_lightcurves','s*',tic_id+'.h5') )
         else:
             fnames = []
             for s in sectors:
-                fnames += glob( os.path.join(QLP_PATH,'s*'+str(s),tic_id+'.h5') )
+                fnames += glob( os.path.join('/Users/mx/TESS_DATA/QLP_lightcurves','s*'+str(s),tic_id+'.h5') )
         
         if len(fnames)>0:
             data = return_QLP_data(fnames, keys=keys, flatten=flatten)
