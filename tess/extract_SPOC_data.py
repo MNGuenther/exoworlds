@@ -26,14 +26,15 @@ sns.set_context(rc={'lines.markeredgewidth': 1})
 import numpy as np
 import os
 from astropy.io import fits
+from collections import OrderedDict
 
 #::: exoworld modules
-from ..lightcurves import expand_flags
+from exoworlds.lightcurves import expand_flags
 
 
 
 
-def extract_SPOC_data(fnames, outdir=''):
+def extract_SPOC_data(fnames, outdir='', PDC=False, auto_correct_dil=False, extract_centd=False, extract_dil=False, do_expand_flags=False):
     '''
     Inputs:
     -------
@@ -45,33 +46,99 @@ def extract_SPOC_data(fnames, outdir=''):
     .csv files with the data
         note that TESS.csv contains the raw flux!
     '''
-    
 
-    t     = []
-    f     = []
-    ferr  = []
-    cx    = []
-    cxerr = []
-    cy    = []
-    cyerr = []
+    data = return_SPOC_data(fnames, PDC=PDC, auto_correct_dil=auto_correct_dil, do_expand_flags=do_expand_flags)
+    
+    if len(outdir)>0 and not os.path.exists(outdir):
+        os.makedirs(outdir)
+    
+    X = np.column_stack((data['time'], data['flux'], data['flux_err']))
+    np.savetxt( os.path.join(outdir,'TESS.csv'), X, delimiter=',', header='time,flux,flux_err')
+    
+    if extract_centd:
+        X = np.column_stack((data['time'], data['centdx'], data['centdx_err']))
+        np.savetxt( os.path.join(outdir,'TESS_centdx.csv'), X, delimiter=',', header='time,centdx,centdx_err')
+        
+        X = np.column_stack((data['time'], data['centdy'], data['centdy_err']))
+        np.savetxt( os.path.join(outdir,'TESS_centdy.csv'), X, delimiter=',', header='time,centdy,centdy_err')
+        
+    if extract_dil:
+        np.savetxt( os.path.join(outdir,'TESS_dil.csv'), data['dil'], header='dil')
+        
+        
+        
+def return_SPOC_data(fnames, keys=None, PDC=False, auto_correct_dil=False, do_expand_flags=False, flatten=False):
+    '''
+    keys : list of str
+        time
+        flux
+        flux_err
+        centdx
+        centdx_err
+        centdy
+        centdy_err
+        dil
+        tessmag
+        teff
+        logg
+        radius
+        t0
+    '''
+    
+    data = OrderedDict()
+    allkeys = ['time', 'flux', 'flux_err', 'centdx', 'centdx_err', 'centdy', 'centdy_err', 'dil' ,'tessmag', 'teff', 'logg', 'radius', 't0']
+    
+    if keys is None:
+        keys = allkeys
+    
+    for key in allkeys:
+        data[key] = []
     
     for fname in fnames:
         hdul = fits.open(fname)
         
         time       = hdul[1].data['TIME']
-        flux       = hdul[1].data['SAP_FLUX']
-        flux_err = hdul[1].data['SAP_FLUX_ERR']
+        if PDC==False:
+            flux       = hdul[1].data['SAP_FLUX']
+            flux_err = hdul[1].data['SAP_FLUX_ERR']
+        elif PDC==True:
+            flux       = hdul[1].data['PDCSAP_FLUX']
+            flux_err = hdul[1].data['PDCSAP_FLUX_ERR']
+        else:
+            raise ValueError('PDC must be a boolean with value True or False.')
         centdx     = hdul[1].data['MOM_CENTR1']
         centdx_err = hdul[1].data['MOM_CENTR1_ERR']
         centdy     = hdul[1].data['MOM_CENTR2']
         centdy_err = hdul[1].data['MOM_CENTR2_ERR']
-        flag = hdul[1].data['QUALITY']*1.
+        flag       = hdul[1].data['QUALITY']*1.
+        
+        #::: other infos
+        dil     = 1. - hdul[1].header['CROWDSAP']
+        try:
+            tessmag = float(hdul[0].header['TESSMAG'])
+        except:
+            tessmag = np.nan
+        try:
+            teff    = float(hdul[0].header['TEFF'])
+        except:
+            teff = np.nan
+        try:
+            logg    = float(hdul[0].header['LOGG'])
+        except:
+            logg = np.nan
+        try:
+            radius  = float(hdul[0].header['RADIUS'])
+        except:
+            radius = np.nan
+        
         
         time += 2457000.
+        t0      = time[0]
         
         #::: expand the flags in a more brutal way
         #::: flag additional n points to the left and right of the spoc flags
-        flag = expand_flags(flag,n=5)
+        if do_expand_flags:
+            flag = expand_flags(flag,n=5)
         
         ind_good = np.where( (flag==0) 
                              & ~np.isnan(flux) 
@@ -90,33 +157,44 @@ def extract_SPOC_data(fnames, outdir=''):
         centdy     = centdy[ind_good]
         centdy_err = centdy_err[ind_good]
         
-        flux_err   /= np.nanmean(flux)
-        flux       /= np.nanmean(flux)
-        centdx     -= np.nanmean(centdx)
-        centdy     -= np.nanmean(centdy)
+        flux_err   /= np.nanmedian(flux)
+        flux       /= np.nanmedian(flux)
+        centdx     -= np.nanmedian(centdx)
+        centdy     -= np.nanmedian(centdy)
+        
+        if auto_correct_dil==True:
+            if PDC==False:
+                #::: correct for the reported SPOC dilution
+                flux_median = np.nanmedian(flux)
+                flux = flux_median + (flux-flux_median) / (1.-dil)
+            else:
+                print('PDCSAP flux is already corrected for dilution. No further correction needed.')
+                
+        data['time']        += list(time)
+        data['flux']        += list(flux)
+        data['flux_err']    += list(flux_err)
+        data['centdx']      += list(centdx)
+        data['centdx_err']  += list(centdx_err)
+        data['centdy']      += list(centdy)
+        data['centdy_err']  += list(centdy_err)
+        data['dil']         += [dil]
+        data['tessmag']     += [tessmag]
+        data['teff']        += [teff]
+        data['logg']        += [logg]
+        data['radius']      += [radius]
+        data['t0']          += [t0]
+        
+    if flatten==True:
+        data['tessmag'] = data['tessmag'][0]
+        data['teff']    = data['teff'][0]
+        data['logg']    = data['logg'][0]
+        data['radius']  = data['radius'][0] 
+        
+    for key in allkeys:
+        if key in keys:
+            data[key] = np.array(data[key])
+        else:
+            del data[key]
+                 
     
-        t     += list(time)
-        f     += list(flux)
-        ferr  += list(flux_err)
-        cx    += list(centdx)
-        cxerr += list(centdx_err)
-        cy    += list(centdy)
-        cyerr += list(centdy_err)
-    
-    time       = np.array(t)
-    flux       = np.array(f)
-    flux_err   = np.array(ferr)
-    centdx     = np.array(cx)
-    centdx_err = np.array(cxerr)
-    centdy     = np.array(cy)
-    centdy_err = np.array(cyerr)
-    
-    
-    X = np.column_stack((time, flux, flux_err))
-    np.savetxt( os.path.join(outdir,'TESS.csv'), X, delimiter=',', header='time,flux,flux_err')
-    
-    X = np.column_stack((time, centdx, centdx_err))
-    np.savetxt( os.path.join(outdir,'TESS_centdx.csv'), X, delimiter=',', header='time,centdx,centdx_err')
-    
-    X = np.column_stack((time, centdy, centdy_err))
-    np.savetxt( os.path.join(outdir,'TESS_centdy.csv'), X, delimiter=',', header='time,centdy,centdy_err')
+    return data

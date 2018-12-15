@@ -17,6 +17,7 @@ from __future__ import print_function, division, absolute_import
 
 #::: modules
 import numpy as np
+import matplotlib.pyplot as plt
 from astropy.stats import sigma_clip
 import timeit
 
@@ -68,7 +69,7 @@ def rebin_err(t, f, ferr=None, dt = 0.02, phasefolded=False, ferr_type='medsig',
         if l.any():
             treg[i] = np.nanmean(t[l])
             N[i] = len(t[l])
-            if ferr==None:
+            if ferr is None:
                 if ferr_type == 'medsig':
                     freg[i], freg_err[i] = medsig(f[l])
                 else:
@@ -193,22 +194,26 @@ def phase_fold_matrix(time, flux_matrix, P, Tprim, dt = 0.02, ferr_type='medsig'
     
     
     
-def plot_phase_folded_lightcurve(ax, time, P, Tprim, flux, ferr=None, ferr_type='meansig', ferr_style='std', normalize=True, title='', period_factor=1.):
-    if normalize: flux /= np.nanmedian(flux)
+def plot_phase_folded_lightcurve(time, flux, period, epoch, ax=None, xlim=[-0.25,0.75], dt=0.02, ferr=None, ferr_type='medsig', ferr_style='sem', normalize=True, title='', period_factor=1.):
+    if ax is None:
+        fig, ax = plt.subplots()
         
-    P *= period_factor
-    phase, phaseflux, phaseflux_err, N, phi = phase_fold(time, flux, P, Tprim, ferr_type='medsig', ferr_style='std')
+    if normalize: 
+        flux /= np.nanmedian(flux)
+        
+    period *= period_factor
+    phase, phaseflux, phaseflux_err, N, phi = phase_fold(time, flux, period, epoch, dt=dt, ferr_type=ferr_type, ferr_style=ferr_style)
 
     def set_ax(ax):
         ax.plot( phi, flux, '.', c='lightgrey', ms=4, lw=0, rasterized=True, zorder = -1 )
-        ax.errorbar( phase, phaseflux, yerr=phaseflux_err, color='r', fmt='o', rasterized=True )
+        ax.errorbar( phase, phaseflux, yerr=phaseflux_err, color='b', fmt='o', rasterized=True )
         ax.set_title( title )
         ax.set_ylabel( 'Flux' )
         ax.set_xlabel( 'Phase' )
-        ax.set_xlim([-0.25,0.75])
+        ax.set_xlim(xlim)
         ax.set_ylim([ np.nanmin(phaseflux-2*phaseflux_err), np.nanmax(phaseflux+2*phaseflux_err) ])
-        ax.axvline(0,color='k')
-        ax.axvline(0.5,color='k')
+#        ax.axvline(0,color='k')
+#        ax.axvline(0.5,color='k')
     
     if isinstance(ax, list):
         set_ax(ax[0])
@@ -216,6 +221,8 @@ def plot_phase_folded_lightcurve(ax, time, P, Tprim, flux, ferr=None, ferr_type=
         ax[1].set_xlim([-0.2,0.2])
     else:
         set_ax(ax)
+        
+    return fig, ax
 
     
     
