@@ -65,7 +65,12 @@ def extract_SPOC_data(fnames, outdir='', PDC=False, auto_correct_dil=False, extr
     if extract_dil:
         np.savetxt( os.path.join(outdir,'TESS_dil.csv'), data['dil'], header='dil')
         
-        
+    import matplotlib.pyplot as plt
+    plt.figure()
+    plt.plot(data['time'], data['flux'], 'b.')
+       
+    
+    
         
 def return_SPOC_data(fnames, keys=None, PDC=False, auto_correct_dil=False, do_expand_flags=False, flatten=False):
     '''
@@ -97,12 +102,12 @@ def return_SPOC_data(fnames, keys=None, PDC=False, auto_correct_dil=False, do_ex
     for fname in fnames:
         hdul = fits.open(fname)
         
-        time       = hdul[1].data['TIME']
+        time      = hdul[1].data['TIME']
         if PDC==False:
-            flux       = hdul[1].data['SAP_FLUX']
+            flux     = hdul[1].data['SAP_FLUX']
             flux_err = hdul[1].data['SAP_FLUX_ERR']
         elif PDC==True:
-            flux       = hdul[1].data['PDCSAP_FLUX']
+            flux     = hdul[1].data['PDCSAP_FLUX']
             flux_err = hdul[1].data['PDCSAP_FLUX_ERR']
         else:
             raise ValueError('PDC must be a boolean with value True or False.')
@@ -113,7 +118,7 @@ def return_SPOC_data(fnames, keys=None, PDC=False, auto_correct_dil=False, do_ex
         flag       = hdul[1].data['QUALITY']*1.
         
         #::: other infos
-        dil     = 1. - hdul[1].header['CROWDSAP']
+        dil        = 1. - hdul[1].header['CROWDSAP']
         try:
             tessmag = float(hdul[0].header['TESSMAG'])
         except:
@@ -133,12 +138,14 @@ def return_SPOC_data(fnames, keys=None, PDC=False, auto_correct_dil=False, do_ex
         
         
         time += 2457000.
-        t0      = time[0]
+        t0    = time[0]
         
         #::: expand the flags in a more brutal way
         #::: flag additional n points to the left and right of the spoc flags
         if do_expand_flags:
             flag = expand_flags(flag,n=5)
+        
+#        ind_good = np.where( (flag==0) )[0]
         
         ind_good = np.where( (flag==0) 
                              & ~np.isnan(flux) 
@@ -147,7 +154,8 @@ def return_SPOC_data(fnames, keys=None, PDC=False, auto_correct_dil=False, do_ex
                              & ~np.isnan(flux_err) 
                              & ~np.isnan(centdx_err) 
                              & ~np.isnan(centdy_err) 
-                             & ((time<2458347) | (time>2458350)) )[0]
+#                             & ((time<2458347) | (time>2458350)) 
+                             )[0]
         
         time       = time[ind_good]
         flux       = flux[ind_good]

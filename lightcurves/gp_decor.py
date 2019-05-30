@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Tue Sep 11 17:32:25 2018
@@ -28,18 +28,20 @@ import matplotlib.pyplot as plt
 from matplotlib.cm import get_cmap
 import os, sys
 from datetime import datetime
-import warnings
+#import warnings
 import emcee
 try:
     import celerite
     from celerite import terms
 except:
-    warnings.warn('Module "celerite" could not be imported. Some functionality might not be available.')
+    pass
+#    warnings.warn('Module "celerite" could not be imported. Some functionality might not be available.')
 try:
     import george
     from george import kernels
 except:
-    warnings.warn('Module "george" could not be imported. Some functionality might not be available.')
+    pass
+#    warnings.warn('Module "george" could not be imported. Some functionality might not be available.')
 import corner
 from multiprocessing import Pool, cpu_count
 from contextlib import closing
@@ -80,11 +82,11 @@ def external_log_prior(params):
     log_sigma, log_rho, log_error_scale = params
     
     lp = 0
-    if not (-23 < log_sigma < 23):
+    if not (-15 < log_sigma < 15):
         lp = -np.inf
-    if not (-23 < log_rho < 23):
+    if not (-15 < log_rho < 15):
         lp = -np.inf
-    if not (-23 < log_error_scale < 0):
+    if not (-15 < log_error_scale < 0):
         lp = -np.inf
     
     return lp
@@ -118,17 +120,20 @@ def log_probability(params):
 ###############################################################################
 def gp_decor(x,y,
         yerr=None,
+        ind_in=None, ind_out=None,
         period=None, epoch=None, width=None, width_2=None,
         secondary_eclipse=False,
+        systematics_amplitude=None,
         systematics_timescale=None,
         mean=1.,
         nwalkers=50, thin_by=50, burn_steps=2500, total_steps=5000,
         bin_width=None,
-        gp_code='celerite',
+        gp_code='celerite', kernel='Matern32',
         method='median_posterior', chunk_size=2000, Nsamples_detr=10, Nsamples_plot=10, 
         xlabel='x', ylabel='y', ydetr_label='ydetr',
         outdir='gp_decor', fname=None, fname_summary=None,
-        multiprocess=False, multiprocess_cores=None):
+        multiprocess=False, multiprocess_cores=None,
+        figstretch=1, rasterized=True):
     
     '''
     Required Input:
@@ -261,7 +266,13 @@ def gp_decor(x,y,
     
     
     #::: MCMC plot settings
-    names = [r'gp: $\log{\sigma}$', r'gp: $\log{\rho}$', r'$\log{(y_\mathrm{err})}$']
+    if kernel=='Matern32':
+        keys = ['gp_log_sigma', 'gp_log_rho', 'log_y_err']
+        names = [r'gp: $\log{\sigma}$', r'gp: $\log{\rho}$', r'$\log{(y_\mathrm{err})}$']
+    elif kernel=='SHOT':
+        keys = ['gp_log_S0', 'gp_log_Q', 'log_omega0', 'log_y_err']
+        names = [r'gp: $\log{S_0}$', r'gp: $\log{Q}$',  r'gp: $\log{\omega_0}$', r'$\log{(y_\mathrm{err})}$']
+        celerite.terms.SHOTerm
     discard = int(1.*burn_steps/thin_by)
     
     
@@ -282,15 +293,18 @@ def gp_decor(x,y,
     
     
     #::: mask transit if required
-    if any(v is None for v in [period, epoch, width]):
-        ind_in = []
-        ind_out = slice(None) #mark all data points as out of transit (i.e. no transit masked)
-    else:
-        if secondary_eclipse is True:
-            ind_ecl1, ind_ecl2, ind_out = index_eclipses(x, epoch, period, width, width_2)
-            ind_in = list(ind_ecl1)+list(ind_ecl2)
+    #::: if ind_in and ind_out are given, use these
+    #::: otherwise, check if period, epoch and width are given
+    if (ind_in is None) and (ind_out is None):
+        if any(v is None for v in [period, epoch, width]):
+            ind_in = []
+            ind_out = slice(None) #mark all data points as out of transit (i.e. no transit masked)
         else:
-            ind_in, ind_out = index_transits(x, epoch, period, width) 
+            if secondary_eclipse is True:
+                ind_ecl1, ind_ecl2, ind_out = index_eclipses(x, epoch, period, width, width_2)
+                ind_in = list(ind_ecl1)+list(ind_ecl2)
+            else:
+                ind_in, ind_out = index_transits(x, epoch, period, width) 
     xx = x[ind_out]
     yy = y[ind_out]
     yyerr = yerr[ind_out]
@@ -313,18 +327,18 @@ def gp_decor(x,y,
     
     
     #::: plot the data
-    fig, ax = plt.subplots()
-    ax.errorbar(x[ind_out], y[ind_out], yerr=yerr[ind_out], fmt=".b", capsize=0)
-    ax.errorbar(x[ind_in], y[ind_in], yerr=yerr[ind_in], fmt=".", color='skyblue', capsize=0)
+    fig, ax = plt.subplots(figsize=(6*figstretch,4))
+    ax.errorbar(x[ind_out], y[ind_out], yerr=yerr[ind_out], fmt=".b", capsize=0, rasterized=rasterized)
+    ax.errorbar(x[ind_in], y[ind_in], yerr=yerr[ind_in], fmt=".", color='skyblue', capsize=0, rasterized=rasterized)
     ax.set( xlabel=xlabel, ylabel=ylabel, title='Original data' )
-    fig.savefig( os.path.join(outdir,fname+'data.jpg'), dpi=100, bbox_inches='tight')
+    fig.savefig( os.path.join(outdir,fname+'data.pdf'), bbox_inches='tight')
     plt.close(fig)
 
     if bin_width is not None:
-        fig, ax = plt.subplots()
-        ax.errorbar(xx, yy, yerr=yyerr, fmt=".b", capsize=0)
+        fig, ax = plt.subplots(figsize=(6*figstretch,4))
+        ax.errorbar(xx, yy, yerr=yyerr, fmt=".b", capsize=0, rasterized=rasterized)
         ax.set( xlabel=xlabel, ylabel=ylabel, title='Original data (binned)' )
-        fig.savefig( os.path.join(outdir,fname+'data_binned.jpg'), dpi=100, bbox_inches='tight')
+        fig.savefig( os.path.join(outdir,fname+'data_binned.pdf'), bbox_inches='tight')
         plt.close(fig)
 
 #    err
@@ -400,7 +414,10 @@ def gp_decor(x,y,
     
     #::: initial guesses
     #::: log(sigma)
-    log_sigma_init = np.log(np.nanstd(yy))
+    if systematics_amplitude is not None:
+        log_sigma_init = np.log(systematics_amplitude)
+    else:
+        log_sigma_init = np.log(np.nanstd(yy))
     
     #::: log(rho)
     if systematics_timescale is not None:
@@ -442,20 +459,20 @@ def gp_decor(x,y,
     tau = sampler.get_autocorr_time(discard=discard, c=5, tol=10, quiet=True)*thin_by
     logprint('\nAutocorrelation times:')
     logprint('\t', '{0: <30}'.format('parameter'), '{0: <20}'.format('tau (in steps)'), '{0: <20}'.format('Chain length (in multiples of tau)'))
-    for i, key in enumerate(names):
-        logprint('\t', '{0: <30}'.format(key), '{0: <20}'.format(tau[i]), '{0: <20}'.format((total_steps-burn_steps) / tau[i]))
+    for i, name in enumerate(names):
+        logprint('\t', '{0: <30}'.format(name), '{0: <20}'.format(tau[i]), '{0: <20}'.format((total_steps-burn_steps) / tau[i]))
     
         
         
         
         
         
-    def gp_predict_in_chunks(y, x, quiet=False):
+    def gp_predict_in_chunks(ybuf, xbuf, quiet=False):
         #::: predict in chunks of 1000 data points to not crash memory
         mu = []
         var = []
-        for i in tqdm(range( int(1.*len(x)/chunk_size)+1 ), disable=quiet):
-            m, v = gp.predict(y, x[i*chunk_size:(i+1)*chunk_size], return_var=True)
+        for i in tqdm(range( int(1.*len(xbuf)/chunk_size)+1 ), disable=quiet):
+            m, v = gp.predict(ybuf, xbuf[i*chunk_size:(i+1)*chunk_size], return_var=True)
             mu += list(m)
             var += list(v)
         return np.array(mu), np.array(var)
@@ -463,20 +480,24 @@ def gp_decor(x,y,
     
         
     
-    def get_params_from_samples(samples, names):
+    def get_params_from_samples(samples, keys):
         '''
         read MCMC results and update params
         '''
-    
-        buf = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]), zip(*np.percentile(samples, [16, 50, 84], axis=0)))                                         
-        theta_median = [ item[0] for item in buf ]
-        theta_ul = [ item[1] for item in buf ]
-        theta_ll = [ item[2] for item in buf ]
-        params_median = { n:t for n,t in zip(names,theta_median) }
-        params_ul = { n:t for n,t in zip(names,theta_ul) }
-        params_ll = { n:t for n,t in zip(names,theta_ll) }
+        theta_median = np.percentile(samples, 50, axis=0)
+        theta_ll = np.percentile(samples, 16, axis=0)
+        theta_ul = np.percentile(samples, 84, axis=0)
+        params_median = { n:t for n,t in zip(keys,theta_median) }
+        params_ll = { n:t for n,t in zip(keys,theta_ll) }
+        params_ul = { n:t for n,t in zip(keys,theta_ul) }
         
-        return params_median, params_ll, params_ul
+        params_lower_err = {}
+        params_upper_err = {}
+        for key in params_median:
+            params_lower_err[key] = abs(params_median[key]-params_ll[key])
+            params_upper_err[key] = abs(params_ul[key]-params_median[key])
+        
+        return params_median, params_lower_err, params_upper_err
 
 
 
@@ -489,23 +510,22 @@ def gp_decor(x,y,
     
     
     #::: get the resulting params dictionaries
-    params, params_ll, params_ul = get_params_from_samples(samples, names)
-
+    params_median, params_lower_err, params_upper_err = get_params_from_samples(samples, keys)
     
     #::: Save the resulting parameters in a table
-    with open( os.path.join(outdir,fname+'table.csv'), 'wb' ) as f:
-        f.write('name,median,ll,ul\n')
-        for i, key in enumerate(names):
-            f.write(key + ',' + str(params[key]) + ',' + str(params_ll[key]) + ',' + str(params_ul[key]) + '\n' )
+    with open( os.path.join(outdir,fname+'table.csv'), 'w' ) as f:
+        f.write('name,median,lower_err,upper_err\n')
+        for i, key in enumerate(keys):
+            f.write(names[i] + ',' + str(params_median[key]) + ',' + str(params_lower_err[key]) + ',' + str(params_upper_err[key]) + '\n' )
     
     
     #::: if requested, append a row into the summary file, too
     if fname_summary is not None:
-        with open( fname_summary, 'ab' ) as f:
+        with open( fname_summary, 'a' ) as f:
             f.write(fname[0:-1] + ',')
-            for i, key in enumerate(names):
-                f.write(str(params[key]) + ',' + str(params_ll[key]) + ',' + str(params_ul[key]))
-                if i<len(names)-1:
+            for i, key in enumerate(keys):
+                f.write(str(params_median[key]) + ',' + str(params_lower_err[key]) + ',' + str(params_upper_err[key]))
+                if i<len(keys)-1:
                     f.write(',')
                 else:
                     f.write('\n')
@@ -559,38 +579,41 @@ def gp_decor(x,y,
     
     
     #::: plot the data and "mean"+"std" GP curve
-    fig, ax = plt.subplots()
-    ax.errorbar(x[ind_out], y[ind_out], yerr=yerr[ind_out], fmt=".b", capsize=0)
-    ax.errorbar(x[ind_in], y[ind_in], yerr=yerr[ind_in], fmt=".", color='skyblue', capsize=0)
+    fig, ax = plt.subplots(figsize=(6*figstretch,4))
+    ax.errorbar(x[ind_out], y[ind_out], yerr=yerr[ind_out], fmt=".b", capsize=0, rasterized=rasterized)
+    ax.errorbar(x[ind_in], y[ind_in], yerr=yerr[ind_in], fmt=".", color='skyblue', capsize=0, rasterized=rasterized)
     ax.plot(t, mu_GP_curve, color='r', zorder=11)
     ax.fill_between(t, mu_GP_curve+std_GP_curve, mu_GP_curve-std_GP_curve, color='r', alpha=0.3, edgecolor="none", zorder=10)
     ax.set( xlabel=xlabel, ylabel=ylabel, title="MCMC posterior predictions" )
-    fig.savefig( os.path.join(outdir,fname+'mcmc_fit.jpg'), dpi=100, bbox_inches='tight')
+    fig.savefig( os.path.join(outdir,fname+'mcmc_fit.pdf'), bbox_inches='tight')
     plt.close(fig)
 
     if bin_width is not None:
-        fig, ax = plt.subplots()
-        ax.errorbar(xx, yy, yerr=yyerr, fmt=".b", capsize=0)
+        fig, ax = plt.subplots(figsize=(6*figstretch,4))
+        ax.errorbar(xx, yy, yerr=yyerr, fmt=".b", capsize=0, rasterized=rasterized)
         ax.plot(t, mu_GP_curve, color='r', zorder=11)
         ax.fill_between(t, mu_GP_curve+std_GP_curve, mu_GP_curve-std_GP_curve, color='r', alpha=0.3, edgecolor="none", zorder=10)
         ax.set( xlabel=xlabel, ylabel=ylabel, title="MCMC posterior predictions (binned)" )
-        fig.savefig( os.path.join(outdir,fname+'mcmc_fit_binned.jpg'), dpi=100, bbox_inches='tight')
+        fig.savefig( os.path.join(outdir,fname+'mcmc_fit_binned.pdf'), bbox_inches='tight')
         plt.close(fig)
 
     if not any(v is None for v in [period, epoch, width]):
         Norbits = int((x[-1]-x[0])/period)+1
         fig, axes = plt.subplots(1, Norbits, figsize=(4*Norbits,3.8), sharey=True)
-        for i in range(Norbits):
-            ax = axes[i]
-            x1 = ( epoch-width+i*period )
-            x2 = ( epoch+width+i*period )
-            ind = np.where( (x>x1) & (x<x2) )[0]
-            ax.errorbar(x[ind_out], y[ind_out], yerr=yerr[ind_out], fmt=".b", capsize=0)
-            ax.errorbar(x[ind_in], y[ind_in], yerr=yerr[ind_in], fmt=".", color='skyblue', capsize=0)
-            ax.plot(t, mu_GP_curve, color='r', zorder=11)
-            ax.fill_between(t, mu_GP_curve+std_GP_curve, mu_GP_curve-std_GP_curve, color='r', alpha=0.3, edgecolor="none", zorder=10)
-            ax.set( xlim=[x1,x2], xlabel=xlabel, ylabel=ylabel, title="MCMC posterior predictions" )
-        fig.savefig( os.path.join(outdir,fname+'mcmc_fit_individual.jpg'), dpi=100, bbox_inches='tight')
+        try:
+            for i in range(Norbits):
+                ax = axes[i]
+                x1 = ( epoch-width+i*period )
+                x2 = ( epoch+width+i*period )
+                ind = np.where( (x>x1) & (x<x2) )[0]
+                ax.errorbar(x[ind_out], y[ind_out], yerr=yerr[ind_out], fmt=".b", capsize=0, rasterized=rasterized)
+                ax.errorbar(x[ind_in], y[ind_in], yerr=yerr[ind_in], fmt=".", color='skyblue', capsize=0, rasterized=rasterized)
+                ax.plot(t, mu_GP_curve, color='r', zorder=11)
+                ax.fill_between(t, mu_GP_curve+std_GP_curve, mu_GP_curve-std_GP_curve, color='r', alpha=0.3, edgecolor="none", zorder=10)
+                ax.set( xlim=[x1,x2], xlabel=xlabel, ylabel=ylabel, title="MCMC posterior predictions" )
+        except:
+            pass
+        fig.savefig( os.path.join(outdir,fname+'mcmc_fit_individual.pdf'), bbox_inches='tight')
         plt.close(fig)
 
 
@@ -615,7 +638,7 @@ def gp_decor(x,y,
         ax.axvline( burn_steps, color='k', linestyle='--' )
     
     plt.tight_layout()
-    fig.savefig( os.path.join(outdir,fname+'mcmc_chains.jpg'), dpi=100, bbox_inches='tight')
+    fig.savefig( os.path.join(outdir,fname+'mcmc_chains.pdf'), bbox_inches='tight')
     plt.close(fig)
  
         
@@ -623,7 +646,7 @@ def gp_decor(x,y,
     fig = corner.corner(samples,
                         labels=names,
                         show_titles=True, title_kwargs={"fontsize": 12});
-    fig.savefig( os.path.join(outdir,fname+'mcmc_corner.jpg'), dpi=100, bbox_inches='tight')
+    fig.savefig( os.path.join(outdir,fname+'mcmc_corner.pdf'), bbox_inches='tight')
     plt.close(fig)
 
     
@@ -699,11 +722,11 @@ def gp_decor(x,y,
     
     #::: Plot the detrended data
 #    logprint 'Plot 1'
-    fig, ax = plt.subplots()
-    ax.errorbar(x, ydetr, yerr=ydetr_err, fmt='b.', capsize=0)
-    ax.errorbar(x[ind_in], ydetr[ind_in], yerr=ydetr_err[ind_in], fmt='.', color='skyblue', capsize=0)
+    fig, ax = plt.subplots(figsize=(6*figstretch,4))
+    ax.errorbar(x, ydetr, yerr=ydetr_err, fmt='b.', capsize=0, rasterized=rasterized)
+    ax.errorbar(x[ind_in], ydetr[ind_in], yerr=ydetr_err[ind_in], fmt='.', color='skyblue', capsize=0, rasterized=rasterized)
     ax.set( xlabel=xlabel, ylabel=ylabel, title="Detrended data" )
-    fig.savefig( os.path.join(outdir,fname+'mcmc_ydetr.jpg'), dpi=100, bbox_inches='tight')
+    fig.savefig( os.path.join(outdir,fname+'mcmc_ydetr.pdf'), bbox_inches='tight')
     plt.close(fig)
     
     
@@ -712,27 +735,27 @@ def gp_decor(x,y,
         phase_x, phase_ydetr, phase_ydetr_err, _, phi = phase_fold(x, ydetr, period, epoch, dt = dt, ferr_type=ferr_type, ferr_style=ferr_style, sigmaclip=sigmaclip)
         
     #    logprint 'Plot 2'
-        fig, ax = plt.subplots()    
-        ax.plot(phi, ydetr, marker='.', linestyle='none', color='lightgrey')
-        ax.errorbar(phase_x, phase_ydetr, yerr=phase_ydetr_err, fmt='b.', capsize=0, zorder=10)
+        fig, ax = plt.subplots(figsize=(6*figstretch,4))  
+        ax.plot(phi, ydetr, marker='.', linestyle='none', color='lightgrey', rasterized=rasterized)
+        ax.errorbar(phase_x, phase_ydetr, yerr=phase_ydetr_err, fmt='b.', capsize=0, zorder=10, rasterized=rasterized)
         ax.set( xlabel='Phase', ylabel=ylabel, title="Detrended data, phase folded" )
         ax.get_yaxis().get_major_formatter().set_useOffset(False)
-        fig.savefig( os.path.join(outdir,fname+'mcmc_ydetr_phase_folded.jpg'), dpi=100, bbox_inches='tight')
+        fig.savefig( os.path.join(outdir,fname+'mcmc_ydetr_phase_folded.pdf'), bbox_inches='tight')
         plt.close(fig)
         
     #    logprint 'Plot 3'
         dtime = phase_x*period*24. #from days to hours
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(6*figstretch,4))
         ax.plot(phi*period*24., ydetr, marker='.', linestyle='none', color='lightgrey')
-        ax.errorbar(dtime, phase_ydetr, yerr=phase_ydetr_err, fmt='b.', capsize=0, zorder=10)
+        ax.errorbar(dtime, phase_ydetr, yerr=phase_ydetr_err, fmt='b.', capsize=0, zorder=10, rasterized=rasterized)
         ax.set( xlim=[-width*24.,width*24.], xlabel=r'$T - T_0 \ (h)$', ylabel=ylabel, title="Detrended data, phase folded, zooom" )
         ax.get_yaxis().get_major_formatter().set_useOffset(False)
-        fig.savefig( os.path.join(outdir,fname+'mcmc_ydetr_phase_folded_zoom.jpg'), dpi=100, bbox_inches='tight')
+        fig.savefig( os.path.join(outdir,fname+'mcmc_ydetr_phase_folded_zoom.pdf'), bbox_inches='tight')
         plt.close(fig)
 
         
         #::: Plot the detrended data phase-folded per transit
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(6*figstretch,4))
         Norbits = int((x[-1]-x[0])/period)+1
         for i in range(Norbits):
             cmap = get_cmap('inferno')
@@ -742,10 +765,10 @@ def gp_decor(x,y,
             ind = np.where( (x>x1) & (x<x2) )[0]
             phase_x, phase_ydetr, phase_ydetr_err, _, phi = phase_fold(x[ind], ydetr[ind], period, epoch, dt = dt, ferr_type=ferr_type, ferr_style=ferr_style, sigmaclip=sigmaclip)
             dtime = phase_x*period*24. #from days to hours
-            ax.errorbar(dtime, phase_ydetr, yerr=phase_ydetr_err, color=color, marker='.', linestyle='none', capsize=0, zorder=10)
+            ax.errorbar(dtime, phase_ydetr, yerr=phase_ydetr_err, color=color, marker='.', linestyle='none', capsize=0, zorder=10, rasterized=rasterized)
         ax.set( xlim=[-width*24.,width*24.], xlabel=r'$T - T_0 \ (h)$', ylabel=ylabel, title="Detrended data, phase folded, zoom, individual" )
         ax.get_yaxis().get_major_formatter().set_useOffset(False)
-        fig.savefig( os.path.join(outdir,fname+'mcmc_ydetr_phase_folded_zoom_individual.jpg'))#, dpi=100, bbox_inches='tight')
+        fig.savefig( os.path.join(outdir,fname+'mcmc_ydetr_phase_folded_zoom_individual.pdf'), bbox_inches='tight')#, dpi=100, bbox_inches='tight')
         plt.close(fig)
         
 

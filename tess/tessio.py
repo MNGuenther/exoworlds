@@ -25,6 +25,8 @@ sns.set_context(rc={'lines.markeredgewidth': 1})
 #::: modules
 import os
 from glob import glob
+import numpy as np
+import matplotlib.pyplot as plt
 import warnings
 
 #::: my modules
@@ -34,9 +36,22 @@ from exoworlds.tess.extract_QLP_data import return_QLP_data
 
 
 
+'''
+
+Usage on PDO:
+    
+$ /pdo/users/maxgue/anaconda2/bin/python
+>> from tessio import *
+>> tessio_plot(...)
+
+'''
 
 
-def tessio(tic_id, sectors=None, server='iMac', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False):
+
+###############################################################################
+#::: TESSIO
+###############################################################################
+def tessio(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False):
     '''
     tic_id : str
         
@@ -102,11 +117,33 @@ def tessio(tic_id, sectors=None, server='iMac', pipeline='spoc', keys=None, PDC=
         raise KeyError('pipeline must be "spoc" or "qlp", but was "' + str(pipeline) + '".')
         
         
+        
+        
+###############################################################################
+#::: TESSIO PLOT
+###############################################################################
+def tessio_plot(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False):
+    data = tessio(tic_id, sectors=sectors, server=server, pipeline=pipeline, keys=keys, PDC=PDC, auto_correct_dil=auto_correct_dil, flatten=flatten)
+    plt.figure()
+    plt.plot(data['time'], data['flux'], 'b.', rasterized=True)
+    
 
+        
+###############################################################################
+#::: TESSIO CSV
+###############################################################################
+def tessio_csv(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False, outfilename='TESS.csv'):
+    data = tessio(tic_id, sectors=sectors, server=server, pipeline=pipeline, keys=keys, PDC=PDC, auto_correct_dil=auto_correct_dil, flatten=flatten)
+    X = np.column_stack((data['time'], data['flux'], data['flux_err']))
+    np.savetxt(outfilename, X, delimiter=',')
+    
+    
 
 if __name__ == '__main__':
     pass
-#    99499828
+
+#    tessio_plot('140859822', server='iMac', pipeline='spoc', PDC=False, auto_correct_dil=True, flatten=True)
+#    tessio_csv('140859822', server='iMac', pipeline='spoc', PDC=False, auto_correct_dil=True, flatten=True)
 
 #    print('SPOC')
 #    data = tessio('140859822', pipeline='spoc', PDC=False, auto_correct_dil=True, flatten=True)

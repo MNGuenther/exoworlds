@@ -49,14 +49,19 @@ def extract_QLP_data( filename, outdir=None ):
         os.makedirs(outdir)
 
     h5 = h5py.File(filename,'r')
+    print(h5.keys())
     
     for i in range(5):
         time = np.array(h5['LightCurve']['BJD'])
         try:
             flag = np.array(h5['LightCurve']['QFLAG'])
+            print("using ['LightCurve']['QFLAG']")
         except:
-            flag = np.zeros_like(time)
-#        flag = np.array(h5['LightCurve']['AperturePhotometry']['Aperture_000']['QualityFlag'])
+            xx = h5['LightCurve']['AperturePhotometry']['Aperture_00'+str(i)]['QualityFlag']
+            ind_good = np.where( xx.value == b'G' )[0]
+            flag = np.ones_like(time)
+            flag[ind_good] = 0
+            print("using ['LightCurve']['AperturePhotometry']['Aperture_00"+str(i)+"']['QualityFlag']")
         mag = np.array(h5['LightCurve']['AperturePhotometry']['Aperture_00'+str(i)]['RawMagnitude'])
         centdx = np.array(h5['LightCurve']['AperturePhotometry']['Aperture_00'+str(i)]['X'])
         centdy = np.array(h5['LightCurve']['AperturePhotometry']['Aperture_00'+str(i)]['Y'])
@@ -65,10 +70,11 @@ def extract_QLP_data( filename, outdir=None ):
         flux = 10**(-(mag-20.242)/2.5)
         flux /= np.nanmean(flux)
         
-        ind_good = np.where( flag==0 )[0]
+#        ind_good = np.where( flag==0 )[0]
+        ind_good = np.where( (flag==0)
 #                             & ((flux<1.05) & (flux>0.95) )
 #                             & ((time<2458347) | (time>2458350) ) 
-#                             )[0]
+                             )[0]
     
         time = time[ind_good]
         flux = flux[ind_good]
