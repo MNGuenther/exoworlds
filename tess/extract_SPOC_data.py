@@ -205,5 +205,16 @@ def return_SPOC_data(fnames, keys=None, PDC=False, auto_correct_dil=False, do_ex
         else:
             del data[key]
                  
+            
+    #::: finally, sort by time
+    ind_sort = np.argsort(data['time'])
+    data['time']       = data['time'][ind_sort]
+    data['flux']       = data['flux'][ind_sort]
+    data['flux_err']   = data['flux_err'][ind_sort]
+    data['centdx']     = data['centdx'][ind_sort]
+    data['centdx_err'] = data['centdx_err'][ind_sort]
+    data['centdy']     = data['centdy'][ind_sort]
+    data['centdy_err'] = data['centdy_err'][ind_sort]
+    
     
     return data
