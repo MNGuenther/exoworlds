@@ -155,14 +155,14 @@ def csv(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=Fals
     if outfilename is None:
         home = os.path.expanduser("~")
         if (pipeline=='spoc') & (PDC is True):
-            outfilename=='TIC_'+tic_id+'_spoc_pdcsap.csv'
+            outfilename='TIC_'+tic_id+'_spoc_pdcsap.csv'
         elif (pipeline=='spoc') & (PDC is False):
             if auto_correct_dil is True:
-                outfilename=='TIC_'+tic_id+'_spoc_sap_acd.csv'
+                outfilename='TIC_'+tic_id+'_spoc_sap_acd.csv'
             else:
-                outfilename=='TIC_'+tic_id+'_spoc_sap.csv'
+                outfilename='TIC_'+tic_id+'_spoc_sap.csv'
         elif (pipeline=='qlp'):
-            outfilename=='TIC_'+tic_id+'_qlp.csv'
+            outfilename='TIC_'+tic_id+'_qlp.csv'
         else:
             raise ValueError('Disaster.')
         if not os.path.exists( os.path.join(home,'tessio') ): os.makedirs(os.path.join(home,'tessio'))
