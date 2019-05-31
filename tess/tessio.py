@@ -59,7 +59,7 @@ def get(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=Fals
         None -> all sectors
         [1,2,3] -> sectors 1,2,3
     '''
-    
+    tic_id = str(tic_id)
     
     if PDC==True and auto_correct_dil==True:
         raise ValueError('You dont want to do that.')
@@ -162,6 +162,8 @@ def csv(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=Fals
                 outfilename=='TIC_'+tic_id+'_spoc_sap.csv'
         elif (pipeline=='qlp'):
             outfilename=='TIC_'+tic_id+'_qlp.csv'
+        else:
+            raise ValueError('Disaster.')
         if not os.path.exists( os.path.join('~','tessio') ): os.makedirs(os.path.join('~','tessio'))
         outfilename = os.path.join('~','tessio',outfilename)
     X = np.column_stack((data['time'], data['flux'], data['flux_err']))
