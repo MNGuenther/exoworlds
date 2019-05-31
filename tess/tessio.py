@@ -129,7 +129,7 @@ def get(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=Fals
 ###############################################################################
 #::: TESSIO PLOT
 ###############################################################################
-def plot(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False, epoch=None, period=None):
+def plot(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False, epoch=None, period=None, show_or_save='show', outfilename=None):
     data = get(tic_id, sectors=sectors, server=server, pipeline=pipeline, keys=keys, PDC=PDC, auto_correct_dil=auto_correct_dil, flatten=flatten)
     
     fig, ax = plt.subplots()
@@ -142,10 +142,30 @@ def plot(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=Fal
         ax.plot(data['time'], data['flux'], 'b.', rasterized=True)
         
     ax.set(xlabel='Time (BJD)', ylabel='Flux', title=tic_id)
-    plt.show()
     
+    if show_or_save=='show':
+        plt.show()
     
+    else:
+        if outfilename is None:
+            home = os.path.expanduser("~")
+            if (pipeline=='spoc') & (PDC is True):
+                outfilename='TIC_'+tic_id+'_spoc_pdcsap.pdf'
+            elif (pipeline=='spoc') & (PDC is False):
+                if auto_correct_dil is True:
+                    outfilename='TIC_'+tic_id+'_spoc_sap_acd.pdf'
+                else:
+                    outfilename='TIC_'+tic_id+'_spoc_sap.pdf'
+            elif (pipeline=='qlp'):
+                outfilename='TIC_'+tic_id+'_qlp.pdf'
+            else:
+                raise ValueError('Disaster.')
+            if not os.path.exists( os.path.join(home,'tessio') ): os.makedirs(os.path.join(home,'tessio'))
+            outfilename = os.path.join(home,'tessio',outfilename)
+        fig.savefig(outfilename, bbox_inches='tight')
 
+        
+        
         
 ###############################################################################
 #::: TESSIO CSV
