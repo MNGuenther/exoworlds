@@ -162,8 +162,10 @@ def csv(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=Fals
                 outfilename=='TIC_'+tic_id+'_spoc_sap.csv'
         elif (pipeline=='qlp'):
             outfilename=='TIC_'+tic_id+'_qlp.csv'
+        if not os.path.exists( os.path.join('~','tessio') ): os.makedirs(os.path.join('~','tessio'))
+        outfilename = os.path.join('~','tessio',outfilename)
     X = np.column_stack((data['time'], data['flux'], data['flux_err']))
-    np.savetxt(outfilename, X, delimiter=',')
+    np.savetxt( outfilename, X, delimiter=',')
     
     
 
