@@ -129,7 +129,7 @@ def get(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=Fals
 ###############################################################################
 #::: TESSIO PLOT
 ###############################################################################
-def plot(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False, epoch=None, period=None, show_or_save='show', outfilename=None, , mask_flags=True, mask_nan=False: 
+def plot(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False, epoch=None, period=None, show_or_save='show', outfilename=None, mask_flags=True, mask_nan=False): 
     tic_id = str(int(tic_id))
     data = get(tic_id, sectors=sectors, server=server, pipeline=pipeline, keys=keys, PDC=PDC, auto_correct_dil=auto_correct_dil, flatten=flatten, mask_flags=mask_flags, mask_nan=mask_nan)
     
