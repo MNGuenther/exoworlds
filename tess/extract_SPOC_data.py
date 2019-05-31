@@ -147,6 +147,7 @@ def return_SPOC_data(fnames, keys=None, PDC=False, auto_correct_dil=False, flatt
                 
         if mask_flags and mask_nan:
             ind_good = np.where( (flag==0) 
+                                 & ~np.isnan(time) 
                                  & ~np.isnan(flux) 
                                  & ~np.isnan(centdx) 
                                  & ~np.isnan(centdy) 
@@ -157,7 +158,9 @@ def return_SPOC_data(fnames, keys=None, PDC=False, auto_correct_dil=False, flatt
                                  )[0]
             
         elif mask_flags and not mask_nan:
-            ind_good = np.where( (flag==0) )[0]
+            ind_good = np.where( (flag==0) 
+                                 & ~np.isnan(time) 
+                                 )[0]
             
         else:
             ind_good = slice(None)
