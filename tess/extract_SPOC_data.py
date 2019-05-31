@@ -34,7 +34,7 @@ from exoworlds.lightcurves import expand_flags
 
 
 
-def extract_SPOC_data(fnames, outdir='', PDC=False, auto_correct_dil=False, extract_centd=False, extract_dil=False, do_expand_flags=False, mask_flags=True):
+def extract_SPOC_data(fnames, outdir='', PDC=False, auto_correct_dil=False, extract_centd=False, extract_dil=False, mask_flags=True, mask_nan=True, do_expand_flags=False):
     '''
     Inputs:
     -------
@@ -47,7 +47,7 @@ def extract_SPOC_data(fnames, outdir='', PDC=False, auto_correct_dil=False, extr
         note that TESS.csv contains the raw flux!
     '''
 
-    data = return_SPOC_data(fnames, PDC=PDC, auto_correct_dil=auto_correct_dil, do_expand_flags=do_expand_flags, mask_flags=mask_flags)
+    data = return_SPOC_data(fnames, PDC=PDC, auto_correct_dil=auto_correct_dil, mask_flags=mask_flags, mask_nan=mask_nan, do_expand_flags=do_expand_flags)
     
     if len(outdir)>0 and not os.path.exists(outdir):
         os.makedirs(outdir)
@@ -72,7 +72,7 @@ def extract_SPOC_data(fnames, outdir='', PDC=False, auto_correct_dil=False, extr
     
     
         
-def return_SPOC_data(fnames, keys=None, PDC=False, auto_correct_dil=False, do_expand_flags=False, flatten=False, mask_flags=True):
+def return_SPOC_data(fnames, keys=None, PDC=False, auto_correct_dil=False, flatten=False, mask_flags=True, mask_nan=True, do_expand_flags=False):
     '''
     keys : list of str
         time
@@ -140,12 +140,12 @@ def return_SPOC_data(fnames, keys=None, PDC=False, auto_correct_dil=False, do_ex
         time += 2457000.
         t0    = time[0]
         
-        if mask_flags:
-            #::: expand the flags in a more brutal way
-            #::: flag additional n points to the left and right of the spoc flags
-            if do_expand_flags:
-                flag = expand_flags(flag,n=5)
+        #::: expand the flags in a more brutal way
+        #::: flag additional n points to the left and right of the spoc flags
+        if mask_flags and do_expand_flags:
+            flag = expand_flags(flag,n=5)
                 
+        if mask_flags and mask_nan:
             ind_good = np.where( (flag==0) 
                                  & ~np.isnan(flux) 
                                  & ~np.isnan(centdx) 
@@ -155,6 +155,10 @@ def return_SPOC_data(fnames, keys=None, PDC=False, auto_correct_dil=False, do_ex
                                  & ~np.isnan(centdy_err) 
     #                             & ((time<2458347) | (time>2458350)) 
                                  )[0]
+            
+        elif mask_flags and not mask_nan:
+            ind_good = np.where( (flag==0) )[0]
+            
         else:
             ind_good = slice(None)
         
