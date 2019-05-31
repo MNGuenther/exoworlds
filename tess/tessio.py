@@ -153,6 +153,7 @@ def plot(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=Fal
 def csv(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False, outfilename=None):
     data = get(tic_id, sectors=sectors, server=server, pipeline=pipeline, keys=keys, PDC=PDC, auto_correct_dil=auto_correct_dil, flatten=flatten)
     if outfilename is None:
+        home = os.path.expanduser("~")
         if (pipeline=='spoc') & (PDC is True):
             outfilename=='TIC_'+tic_id+'_spoc_pdcsap.csv'
         elif (pipeline=='spoc') & (PDC is False):
@@ -164,7 +165,6 @@ def csv(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=Fals
             outfilename=='TIC_'+tic_id+'_qlp.csv'
         else:
             raise ValueError('Disaster.')
-            home = os.path.expanduser("~")
         if not os.path.exists( os.path.join(home,'tessio') ): os.makedirs(os.path.join(home,'tessio'))
         outfilename = os.path.join(home,'tessio',outfilename)
     X = np.column_stack((data['time'], data['flux'], data['flux_err']))
