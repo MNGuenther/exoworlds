@@ -59,7 +59,7 @@ def get(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=Fals
         None -> all sectors
         [1,2,3] -> sectors 1,2,3
     '''
-    tic_id = str(tic_id)
+    tic_id = str(int(tic_id))
     
     if PDC==True and auto_correct_dil==True:
         raise ValueError('You dont want to do that.')
@@ -129,7 +129,8 @@ def get(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=Fals
 ###############################################################################
 #::: TESSIO PLOT
 ###############################################################################
-def plot(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False, epoch=None, period=None, show_or_save='show', outfilename=None):
+def plot(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False, epoch=None, period=None, show_or_save='show', outfilename=None): 
+    tic_id = str(int(tic_id))
     data = get(tic_id, sectors=sectors, server=server, pipeline=pipeline, keys=keys, PDC=PDC, auto_correct_dil=auto_correct_dil, flatten=flatten)
     
     fig, ax = plt.subplots()
@@ -171,6 +172,7 @@ def plot(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=Fal
 #::: TESSIO CSV
 ###############################################################################
 def csv(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False, outfilename=None):
+    tic_id = str(int(tic_id))
     data = get(tic_id, sectors=sectors, server=server, pipeline=pipeline, keys=keys, PDC=PDC, auto_correct_dil=auto_correct_dil, flatten=flatten)
     if outfilename is None:
         home = os.path.expanduser("~")
