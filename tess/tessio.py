@@ -51,7 +51,7 @@ $ /pdo/users/maxgue/anaconda3/bin/python
 ###############################################################################
 #::: TESSIO
 ###############################################################################
-def get(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False):
+def get(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False, mask_flags=True):
     '''
     tic_id : str
         
@@ -85,7 +85,7 @@ def get(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=Fals
                     fnames += glob( os.path.join('/pdo/spoc-data/sector-*'+str(s)+'*/light-curve','*'+tic_id+'*lc.fits.gz') )
          
         if len(fnames)>0:
-            data = return_SPOC_data(fnames, keys=keys, PDC=PDC, auto_correct_dil=auto_correct_dil, flatten=flatten)
+            data = return_SPOC_data(fnames, keys=keys, PDC=PDC, auto_correct_dil=auto_correct_dil, flatten=flatten, mask_flags=mask_flags)
             return data
         
         else:
@@ -129,9 +129,9 @@ def get(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=Fals
 ###############################################################################
 #::: TESSIO PLOT
 ###############################################################################
-def plot(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False, epoch=None, period=None, show_or_save='show', outfilename=None): 
+def plot(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False, epoch=None, period=None, show_or_save='show', outfilename=None, mask_flags=True): 
     tic_id = str(int(tic_id))
-    data = get(tic_id, sectors=sectors, server=server, pipeline=pipeline, keys=keys, PDC=PDC, auto_correct_dil=auto_correct_dil, flatten=flatten)
+    data = get(tic_id, sectors=sectors, server=server, pipeline=pipeline, keys=keys, PDC=PDC, auto_correct_dil=auto_correct_dil, flatten=flatten, mask_flags=mask_flags)
     
     fig, ax = plt.subplots()
     if (period is not None) & (epoch is not None):
@@ -171,9 +171,9 @@ def plot(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=Fal
 ###############################################################################
 #::: TESSIO CSV
 ###############################################################################
-def csv(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False, outfilename=None):
+def csv(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False, outfilename=None, mask_flags=True):
     tic_id = str(int(tic_id))
-    data = get(tic_id, sectors=sectors, server=server, pipeline=pipeline, keys=keys, PDC=PDC, auto_correct_dil=auto_correct_dil, flatten=flatten)
+    data = get(tic_id, sectors=sectors, server=server, pipeline=pipeline, keys=keys, PDC=PDC, auto_correct_dil=auto_correct_dil, flatten=flatten, mask_flags=mask_flags)
     if outfilename is None:
         home = os.path.expanduser("~")
         if (pipeline=='spoc') & (PDC is True):
