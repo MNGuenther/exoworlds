@@ -40,7 +40,7 @@ from exoworlds.lightcurves.index_transits import index_eclipses
 
 Usage on PDO:
     
-$ /pdo/users/maxgue/anaconda2/bin/python
+$ /pdo/users/maxgue/anaconda3/bin/python
 >> from exoworlds.tess import tessio
 >> tessio.plot(...)
 
