@@ -32,7 +32,7 @@ import warnings
 #::: my modules
 from exoworlds.tess.extract_SPOC_data import return_SPOC_data
 from exoworlds.tess.extract_QLP_data import return_QLP_data
-
+from exoworlds.lightcurves.index_transits import index_eclipses
 
 
 
@@ -41,8 +41,8 @@ from exoworlds.tess.extract_QLP_data import return_QLP_data
 Usage on PDO:
     
 $ /pdo/users/maxgue/anaconda2/bin/python
->> from tessio import *
->> tessio_plot(...)
+>> from exoworlds.tess import tessio
+>> tessio.plot(...)
 
 '''
 
@@ -51,7 +51,7 @@ $ /pdo/users/maxgue/anaconda2/bin/python
 ###############################################################################
 #::: TESSIO
 ###############################################################################
-def tessio(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False):
+def get(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False):
     '''
     tic_id : str
         
@@ -99,11 +99,18 @@ def tessio(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=F
     elif pipeline=='qlp':    
         
         if sectors is None:
-            fnames = glob( os.path.join('/Users/mx/TESS_DATA/QLP_lightcurves','s*',tic_id+'.h5') )
+            if server=='iMac':
+                fnames = glob( os.path.join('/Users/mx/TESS_DATA/QLP_lightcurves','s*',tic_id+'.h5') )
+            elif server=='pdo':
+                fnames = glob( os.path.join('/pdo/qlp-data/sector-*'+str(s)+'/ffi/cam*/ccd*/LC/',tic_id+'.h5') )
         else:
             fnames = []
-            for s in sectors:
-                fnames += glob( os.path.join('/Users/mx/TESS_DATA/QLP_lightcurves','s*'+str(s),tic_id+'.h5') )
+            if server=='iMac':
+                for s in sectors:
+                    fnames += glob( os.path.join('/Users/mx/TESS_DATA/QLP_lightcurves','s*'+str(s),tic_id+'.h5') )
+            elif server=='pdo':
+                for s in sectors:
+                    fnames += glob( os.path.join('/pdo/qlp-data/sector-*'+str(s)+'/ffi/cam*/ccd*/LC/',tic_id+'.h5') )
         
         if len(fnames)>0:
             data = return_QLP_data(fnames, keys=keys, flatten=flatten)
@@ -122,18 +129,39 @@ def tessio(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=F
 ###############################################################################
 #::: TESSIO PLOT
 ###############################################################################
-def tessio_plot(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False):
-    data = tessio(tic_id, sectors=sectors, server=server, pipeline=pipeline, keys=keys, PDC=PDC, auto_correct_dil=auto_correct_dil, flatten=flatten)
-    plt.figure()
-    plt.plot(data['time'], data['flux'], 'b.', rasterized=True)
+def plot(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False, epoch=None, period=None):
+    data = get(tic_id, sectors=sectors, server=server, pipeline=pipeline, keys=keys, PDC=PDC, auto_correct_dil=auto_correct_dil, flatten=flatten)
+    
+    fig, ax = plt.subplots()
+    if (period is not None) & (epoch is not None):
+        ind_ecl1, ind_ecl2, ind_out = index_eclipses(data['time'], epoch, period, 0.25, 0.25)
+        ax.plot(data['time'][ind_out], data['flux'][ind_out], 'b.', rasterized=True)
+        ax.plot(data['time'][ind_ecl1], data['flux'][ind_ecl1], 'b.', color='orange', rasterized=True)
+        ax.plot(data['time'][ind_ecl2], data['flux'][ind_ecl2], 'r.', rasterized=True)
+    else:
+        ax.plot(data['time'], data['flux'], 'b.', rasterized=True)
+        
+    ax.set(xlabel='Time (BJD)', ylabel='Flux', title=tic_id)
+    plt.show()
+    
     
 
         
 ###############################################################################
 #::: TESSIO CSV
 ###############################################################################
-def tessio_csv(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False, outfilename='TESS.csv'):
-    data = tessio(tic_id, sectors=sectors, server=server, pipeline=pipeline, keys=keys, PDC=PDC, auto_correct_dil=auto_correct_dil, flatten=flatten)
+def csv(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, PDC=False, auto_correct_dil=False, flatten=False, outfilename=None):
+    data = get(tic_id, sectors=sectors, server=server, pipeline=pipeline, keys=keys, PDC=PDC, auto_correct_dil=auto_correct_dil, flatten=flatten)
+    if outfilename is None:
+        if (pipeline=='spoc') & (PDC is True):
+            outfilename=='TIC_'+tic_id+'_spoc_pdcsap.csv'
+        elif (pipeline=='spoc') & (PDC is False):
+            if auto_correct_dil is True:
+                outfilename=='TIC_'+tic_id+'_spoc_sap_acd.csv'
+            else:
+                outfilename=='TIC_'+tic_id+'_spoc_sap.csv'
+        elif (pipeline=='qlp'):
+            outfilename=='TIC_'+tic_id+'_qlp.csv'
     X = np.column_stack((data['time'], data['flux'], data['flux_err']))
     np.savetxt(outfilename, X, delimiter=',')
     
@@ -142,16 +170,16 @@ def tessio_csv(tic_id, sectors=None, server='pdo', pipeline='spoc', keys=None, P
 if __name__ == '__main__':
     pass
 
-#    tessio_plot('140859822', server='iMac', pipeline='spoc', PDC=False, auto_correct_dil=True, flatten=True)
-#    tessio_csv('140859822', server='iMac', pipeline='spoc', PDC=False, auto_correct_dil=True, flatten=True)
+#    plot('140859822', server='iMac', pipeline='spoc', PDC=False, auto_correct_dil=True, flatten=True, epoch=0, period=5.6)
+#    csv('140859822', server='iMac', pipeline='spoc', PDC=False, auto_correct_dil=True, flatten=True)
 
 #    print('SPOC')
-#    data = tessio('140859822', pipeline='spoc', PDC=False, auto_correct_dil=True, flatten=True)
+#    data = get('140859822', pipeline='spoc', PDC=False, auto_correct_dil=True, flatten=True)
 #    print(data)
 #    plt.figure()
 #    plt.plot(data['time'], data['flux'])
 #    plt.axvline(data['time'][156], color='r')
     
 #    print('\nQLP')
-#    data = tessio('471013500', keys=[], pipeline='qlp', flatten=True)
+#    data = get('471013500', keys=[], pipeline='qlp', flatten=True)
 #    print(data)
