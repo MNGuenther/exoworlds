@@ -158,6 +158,7 @@ def return_SPOC_data(fnames, keys=None, PDC=False, auto_correct_dil=False, flatt
                                  )[0]
             
         elif mask_flags and not mask_nan:
+            print('masking flags but not nan')
             ind_good = np.where( (flag==0) 
                                  & ~np.isnan(time) 
                                  )[0]
