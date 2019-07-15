@@ -24,6 +24,7 @@ sns.set_context(rc={'lines.markeredgewidth': 1})
 
 #::: modules
 import numpy as np
+import matplotlib.pyplot as plt
 import os
 from astropy.io import fits
 from collections import OrderedDict
@@ -34,7 +35,7 @@ from exoworlds.lightcurves import expand_flags
 
 
 
-def extract_SPOC_data(fnames, outdir='', PDC=False, auto_correct_dil=False, extract_centd=False, extract_dil=False, mask_flags=True, mask_nan=True, do_expand_flags=False):
+def extract_SPOC_data(fnames, outdir='', PDC=False, auto_correct_dil=False, extract_centd=False, extract_dil=False, mask_flags=True, mask_nan=True, do_expand_flags=False, plot=True):
     '''
     Inputs:
     -------
@@ -65,10 +66,10 @@ def extract_SPOC_data(fnames, outdir='', PDC=False, auto_correct_dil=False, extr
     if extract_dil:
         np.savetxt( os.path.join(outdir,'TESS_dil.csv'), data['dil'], header='dil')
         
-    import matplotlib.pyplot as plt
-    plt.figure()
-    plt.plot(data['time'], data['flux'], 'b.')
-       
+    if plot is True:
+        fig = plt.figure(figsize=(20,4))
+        plt.plot(data['time'], data['flux'], 'b.', rasterized=True)
+        fig.savefig( os.path.join(outdir,'TESS.pdf'), bbox_inches='tight' )
     
     
         
